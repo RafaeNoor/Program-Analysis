@@ -5,11 +5,19 @@
 #include "dataflow.h"
 
 namespace llvm {
-  Flow::Flow(bool f, Function& p, void (*tran)(BasicBlock*), void (*m)(BasicBlock**,int)){
+  Flow::Flow(bool f, Function& p, void (*tran)(BasicBlock*), void (*m)(TerminatorInst*,std::map<BasicBlock*,BBInfo* >)){
     isFwd = f;
     Func = &p;
     transfer = tran;
     meet = m;
+  }
+
+  Flow::Flow(bool f, Function& p, void(*tran)(BasicBlock*))
+  {
+    isFwd = f;
+    Func = &p;
+    transfer = tran;
+
   }
 
 
@@ -41,6 +49,7 @@ namespace llvm {
 
     std::queue<BasicBlock* > q;
     q.push(b);
+    info[b]->inserted = true;
 
 
     while(q.size() != 0){
@@ -52,7 +61,10 @@ namespace llvm {
       TerminatorInst* ti = curr -> getTerminator();
       for(unsigned i=0, nsucc = ti -> getNumSuccessors(); i<nsucc;++i){
         BasicBlock* succ = &*ti->getSuccessor(i);
-        q.push(succ);
+        if(!info[succ]->inserted){
+          q.push(succ);
+          info[succ]->inserted = true;
+        }
       }
 
     }

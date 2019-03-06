@@ -14,6 +14,16 @@ using namespace llvm;
 using namespace std;
 
 namespace {
+
+    void available_transfer(BasicBlock* b){
+      errs()<<*b<<"\n";
+    }
+
+    void available_meet(TerminatorInst* lb, std::map<BasicBlock*, BBInfo*> m){
+      return;
+     }
+    
+
   class AvailableExpressions : public FunctionPass {
     
   public:
@@ -21,6 +31,7 @@ namespace {
     
     AvailableExpressions() : FunctionPass(ID) { }
     
+        
     virtual bool runOnFunction(Function& F) {
       
       // Here's some code to familarize you with the Expression
@@ -42,12 +53,18 @@ namespace {
       // Print out the expressions used in the function
       outs() << "Expressions used by this function:\n";
       printSet(&expressions);
+
+      Flow df(true,F,available_transfer,available_meet);
+
+      df.analyze();
+
+      
       
       // Did not modify the incoming Function.
       return false;
     }
-    
-    virtual void getAnalysisUsage(AnalysisUsage& AU) const {
+
+        virtual void getAnalysisUsage(AnalysisUsage& AU) const {
       AU.setPreservesAll();
     }
     

@@ -16,6 +16,7 @@
 #include "llvm/IR/ValueMap.h"
 #include "llvm/IR/CFG.h"
 #include <map>
+#include <queue>
 
 namespace llvm {
 
@@ -26,10 +27,9 @@ namespace llvm {
 //
 
   class BBInfo{
-    private:
-      bool i;
     public:
-      BBInfo():i(false){}
+      bool inserted;
+      BBInfo():inserted(false){}
   };
 
 
@@ -38,10 +38,11 @@ namespace llvm {
       bool isFwd;
       Function* Func;
       void (*transfer)(BasicBlock*);
-      void (*meet)(BasicBlock**, int); 
+      void (*meet)(TerminatorInst* , std::map<BasicBlock*,BBInfo* >); 
       std::map<BasicBlock*,BBInfo* > info;
      public:
-      Flow(bool f, Function& p, void (*tran)(BasicBlock*),void (*m)(BasicBlock**,int));  
+      Flow(bool f, Function& p, void (*tran)(BasicBlock*),void (*m)(TerminatorInst*,std::map<BasicBlock*, BBInfo*>));  
+      Flow(bool f, Function& p, void (*tran)(BasicBlock*));
       void analyze();
       void runAnalysis(BasicBlock* b);
   };
