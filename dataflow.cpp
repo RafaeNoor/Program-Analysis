@@ -38,17 +38,24 @@ namespace llvm {
     if(!b){
       return;
     }
-    transfer(b);
-    
-    TerminatorInst* ti = b -> getTerminator();
 
-    for(unsigned i =0, nsucc = ti->getNumSuccessors(); i < nsucc;++i){
-      BasicBlock* succ = ti->getSuccessor(i);
-      runAnalysis(succ);
+    std::queue<BasicBlock* > q;
+    q.push(b);
+
+
+    while(q.size() != 0){
+      BasicBlock* curr = q.front();
+      q.pop();
+
+      transfer(curr);
+
+      TerminatorInst* ti = curr -> getTerminator();
+      for(unsigned i=0, nsucc = ti -> getNumSuccessors(); i<nsucc;++i){
+        BasicBlock* succ = &*ti->getSuccessor(i);
+        q.push(succ);
+      }
+
     }
-
-
   }
-
   // Add code for your dataflow abstraction here.
 }
