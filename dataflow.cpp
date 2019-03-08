@@ -5,30 +5,38 @@
 #include "dataflow.h"
 
 namespace llvm {
-  Flow::Flow(bool f, Function& p, void (*tran)(BasicBlock*), void (*m)(TerminatorInst*,std::map<BasicBlock*,BBInfo* >)){
+  Flow::Flow(bool f, Function& p, void (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo* >&), void (*m)(BasicBlock*,std::map<BasicBlock*,BBInfo* >&)){
     isFwd = f;
     Func = &p;
     transfer = tran;
     meet = m;
-  }
 
-  Flow::Flow(bool f, Function& p, void(*tran)(BasicBlock*))
-  {
-    isFwd = f;
-    Func = &p;
-    transfer = tran;
-
-  }
-
-
-  void Flow::analyze()
-  {
     for(Function::iterator b = Func->begin(), e = Func->end(); b!=e;++b){
       BasicBlock* bb = &*b;
       info[bb] = new BBInfo;
     }
+  }
+
+  Flow::Flow(bool f, Function& p, void (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo* > &),void (*m)(BasicBlock*,std::map<BasicBlock*, BBInfo*> &),int n){
+    isFwd = f;
+    Func = &p;
+    transfer = tran;
+    meet = m;
+
+    for(Function::iterator b = Func->begin(), e = Func->end(); b!=e;++b){
+      BasicBlock* bb = &*b;
+      info[bb] = new BBInfo(n);
+    }
+  }  
 
 
+
+  
+
+
+  void Flow::analyze()
+  {
+    
     if(isFwd){
       BasicBlock* entry = &Func->getEntryBlock();
       runAnalysis(entry);
@@ -56,7 +64,9 @@ namespace llvm {
       BasicBlock* curr = q.front();
       q.pop();
 
-      transfer(curr);
+
+      meet(curr,info);
+      transfer(curr,info);
 
       TerminatorInst* ti = curr -> getTerminator();
       for(unsigned i=0, nsucc = ti -> getNumSuccessors(); i<nsucc;++i){

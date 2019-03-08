@@ -29,7 +29,14 @@ namespace llvm {
   class BBInfo{
     public:
       bool inserted;
+      BitVector* input;
+      BitVector* output; 
       BBInfo():inserted(false){}
+      BBInfo(int n){
+        inserted = false;
+        input = new BitVector(n,false); 
+        output = new BitVector(n,false);
+      }
   };
 
 
@@ -37,12 +44,15 @@ namespace llvm {
     protected:
       bool isFwd;
       Function* Func;
-      void (*transfer)(BasicBlock*);
-      void (*meet)(TerminatorInst* , std::map<BasicBlock*,BBInfo* >); 
+      void (*transfer)(BasicBlock*, std::map<BasicBlock*,BBInfo*>&);
+      void (*meet)(BasicBlock* , std::map<BasicBlock*,BBInfo* >&); 
       std::map<BasicBlock*,BBInfo* > info;
+
      public:
-      Flow(bool f, Function& p, void (*tran)(BasicBlock*),void (*m)(TerminatorInst*,std::map<BasicBlock*, BBInfo*>));  
-      Flow(bool f, Function& p, void (*tran)(BasicBlock*));
+      Flow(bool f, Function& p, void (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo* >&),void (*m)(BasicBlock*,std::map<BasicBlock*, BBInfo*>&));  
+      Flow(bool f, Function& p, void (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo*>&),void (*m)(BasicBlock*,std::map<BasicBlock*, BBInfo*>&),int n);  
+
+
       void analyze();
       void runAnalysis(BasicBlock* b);
   };
