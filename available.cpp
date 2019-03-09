@@ -16,17 +16,133 @@ using namespace std;
 namespace {
 
 
+  void printBitVector(BitVector bv){
+    for(unsigned i =0 ; i < bv.size() ;i++){
+      if(bv[i])
+        errs()<<"1 ";
+      else
+        errs()<<"0 ";
+    }
+    errs()<<"\n";
+  }
 
-  vector<Expression> globalVec;
+  std::vector<Expression> globalVec;
 
   void available_transfer(BasicBlock* b, std::map<BasicBlock*, BBInfo*> &m){
-    errs()<<*b<<"\n";
+    //errs()<<*b<<"\n";
 
+    /*
     for(unsigned i =0; i<globalVec.size();i++){ // globalVec set according to runOnFunction. Hence available in our global scope
       errs()<<globalVec[i].toString()<<"\n";
-      
-
     }
+    */
+
+    // Transfer Function:
+    // Out[b] = gen[b] U (In[B] - Kill[B])
+    // 
+    
+    BitVector In_B(*(m[b]->input)); // In[B]
+    BitVector Gen_B(m[b]->input->size(),false);//Gen[B]
+    BitVector Kill_B(m[b]->input->size(),false);//Kill[B]
+    BitVector Out_B(In_B); //Out[B]
+
+
+    std::vector<std::string> Kill_Names; // Kill_name
+
+    
+    for(BasicBlock::iterator BI = b->begin(), e = b->end(); BI!=e;++BI){
+      Instruction* I = &*BI;
+      std::vector<Expression> alive_rn;
+      errs()<<"\n========\n"<<*I<<"\n";
+      Value* val = &(*I);
+
+      if(BinaryOperator * BO = dyn_cast<BinaryOperator>(I)){// If it's an Expression
+        Expression expr(I);
+        errs()<<"Expression: "<<expr.toString()<<"\n";
+      
+        
+        std::string toKill = getShortValueName(val);
+        // Gen_Set processing
+        for(int k = 0; k<globalVec.size(); k++){ //TODO: Use find operator to one-line this function
+          if(globalVec[k] == expr){
+            Gen_B[k] = true; // expression is generated at this point
+            errs()<<expr.toString()<<" added to GenSet"<<"\n";
+            //errs()<<"LHS: "<<getShortValueName(val)<<"\n"; // need to remove any expression from GenSet which used LHS
+
+            for(int j=0;j<globalVec.size();j++){
+              if(j==k)
+                continue;
+
+              if(getShortValueName(globalVec[j].v1) == toKill){
+                Gen_B[j] = 0;
+                errs()<<"Removing from Gen definition: "<<globalVec[j].toString()<<" as "<<toKill<<" == "<<getShortValueName(globalVec[j].v1)<<"\n";
+              }
+
+
+              if(getShortValueName(globalVec[j].v2) == toKill){
+                Gen_B[j] = 0;
+                errs()<<"Removing from Gen definition: "<<globalVec[j].toString()<<" as "<<toKill<<" == "<<getShortValueName(globalVec[j].v2)<<"\n";
+              }
+              
+            }
+          }
+        }
+
+
+        //Kill_Set processing
+        for(int k =0;k<globalVec.size();k++){
+          if(getShortValueName(globalVec[k].v1) == toKill){
+            Kill_B[k] = 1;
+            errs()<<"Killing definition: "<<globalVec[k].toString()<<"\n";
+          }
+
+          if(getShortValueName(globalVec[k].v2) == toKill){
+            Kill_B[k] = 1;
+            errs()<<"Killing definition: "<<globalVec[k].toString()<<"\n";
+
+          }
+        }
+      }
+      //Update Out_B after every instructions
+      //Out_B = Gen_B | (Out_B & Kill_B.flip()) ; 
+
+      errs()<<"\nGen_B: ";
+      printBitVector(Gen_B);
+
+      errs()<<"Kill_B: ";
+      printBitVector(Kill_B);
+
+      errs()<<"In_B: ";
+      printBitVector(Out_B);
+
+
+      BitVector Gen_Kill(Out_B); 
+      Gen_Kill &= (Kill_B.flip());
+      
+      BitVector OR_Gen(Gen_B);
+      OR_Gen |= Gen_Kill;
+
+      Out_B = OR_Gen;
+
+      Kill_B.reset();
+      Gen_B.reset();
+
+      for(unsigned p = 0; p< Out_B.size(); p++){
+        if(Out_B[p] == true){
+          alive_rn.push_back(globalVec[p]);
+          errs()<<"1 ";
+        } else {
+          errs()<<"0 ";
+        }
+      }
+
+      printSet(&alive_rn);
+      
+    }
+
+    //Dummy updating of out[B]
+    m[b]->output =  new BitVector(Out_B);
+
   }
 
   void available_meet(BasicBlock* lb, std::map<BasicBlock*, BBInfo*> &m){
@@ -53,8 +169,9 @@ namespace {
     }
     m[lb]->input = new BitVector(meeting);
 
-    errs()<<"# Predeccesors = "<<numPreds<<"\n";
+    errs()<<"=================================================================\n# Predeccesors = "<<numPreds<<"\n";
 
+    
     for(unsigned i =0;i < m[lb]->input->size();i++){
       if((*(m[lb]->input))[i])
         errs()<<"1 ";
@@ -62,6 +179,7 @@ namespace {
         errs()<<"0 ";
     }
     errs()<<"\n";
+    
 
     return;
   }
