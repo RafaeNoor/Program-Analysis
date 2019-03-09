@@ -15,8 +15,18 @@ using namespace std;
 
 namespace {
 
+
+
+  vector<Expression> globalVec;
+
   void available_transfer(BasicBlock* b, std::map<BasicBlock*, BBInfo*> &m){
     errs()<<*b<<"\n";
+
+    for(unsigned i =0; i<globalVec.size();i++){ // globalVec set according to runOnFunction. Hence available in our global scope
+      errs()<<globalVec[i].toString()<<"\n";
+      
+
+    }
   }
 
   void available_meet(BasicBlock* lb, std::map<BasicBlock*, BBInfo*> &m){
@@ -100,6 +110,8 @@ namespace {
         // Print out the expressions used in the function
         outs() << "Expressions used by this function:\n";
         printSet(&expressions);
+
+        globalVec = expressions;
 
         //Flow df(true,F,available_transfer,available_meet);
         //df.analyze();
