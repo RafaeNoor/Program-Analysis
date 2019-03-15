@@ -34,7 +34,7 @@ namespace llvm {
 
     if(isFwd){
       BasicBlock* entry = &Func->getEntryBlock();
-      runFwdAnalysis(entry);
+      runAnalysis(entry);
     } else {
 
 
@@ -42,7 +42,7 @@ namespace llvm {
 
   }
 
-  void Flow::runFwdAnalysis(BasicBlock* b)
+  void Flow::runAnalysis(BasicBlock* b)
   {
     if(!b){
       return;
