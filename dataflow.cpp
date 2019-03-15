@@ -34,7 +34,7 @@ namespace llvm {
 
     if(isFwd){
       BasicBlock* entry = &Func->getEntryBlock();
-      runAnalysis(entry);
+      runFwdAnalysis(entry);
     } else {
 
 
@@ -42,7 +42,7 @@ namespace llvm {
 
   }
 
-  void Flow::runAnalysis(BasicBlock* b)
+  void Flow::runFwdAnalysis(BasicBlock* b)
   {
     if(!b){
       return;
@@ -57,7 +57,7 @@ namespace llvm {
     int numIter = 1;
 
     while(!converge){
-      
+
       errs()<<"\nIteration Number: "<<numIter<<" \n";
       numIter++;
 
@@ -74,14 +74,25 @@ namespace llvm {
         if(inputChanged || outputChanged)
           converge = false;
 
-        TerminatorInst* ti = curr -> getTerminator();
-        for(unsigned i=0, nsucc = ti -> getNumSuccessors(); i<nsucc;++i){
-          BasicBlock* succ = &*ti->getSuccessor(i);
-          if(!info[succ]->inserted){
-            q.push(succ);
-            info[succ]->inserted = true;
+        if(isFwd){
+          TerminatorInst* ti = curr -> getTerminator();
+          for(unsigned i=0, nsucc = ti -> getNumSuccessors(); i<nsucc;++i){
+            BasicBlock* succ = &*ti->getSuccessor(i);
+            if(!info[succ]->inserted){
+              q.push(succ);
+              info[succ]->inserted = true;
+            }
+          }
+        } else {
+          for (auto it = pred_begin(curr), et = pred_end(curr); it != et; ++it){
+            BasicBlock* pred = *it;
+            if(!info[pred]->inserted){
+              q.push(pred);
+              info[pred]->inserted = true;
+            }
           }
         }
+
 
       }
       errs()<<"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
@@ -96,5 +107,6 @@ namespace llvm {
     }
 
   }
+
   // Add code for your dataflow abstraction here.
 }
