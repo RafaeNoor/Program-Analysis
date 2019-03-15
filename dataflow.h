@@ -17,6 +17,7 @@
 #include "llvm/IR/CFG.h"
 #include <map>
 #include <queue>
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -44,13 +45,13 @@ namespace llvm {
     protected:
       bool isFwd;
       Function* Func;
-      void (*transfer)(BasicBlock*, std::map<BasicBlock*,BBInfo*>&);
-      void (*meet)(BasicBlock* , std::map<BasicBlock*,BBInfo* >&); 
+      bool (*transfer)(BasicBlock*, std::map<BasicBlock*,BBInfo*>&);
+      bool (*meet)(BasicBlock* , std::map<BasicBlock*,BBInfo* >&); 
       std::map<BasicBlock*,BBInfo* > info;
 
      public:
-      Flow(bool f, Function& p, void (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo* >&),void (*m)(BasicBlock*,std::map<BasicBlock*, BBInfo*>&));  
-      Flow(bool f, Function& p, void (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo*>&),void (*m)(BasicBlock*,std::map<BasicBlock*, BBInfo*>&),int n);  
+      Flow(bool f, Function& p, bool (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo* >&),bool (*m)(BasicBlock*,std::map<BasicBlock*, BBInfo*>&));  
+      Flow(bool f, Function& p, bool (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo*>&),bool(*m)(BasicBlock*,std::map<BasicBlock*, BBInfo*>&),int n);  
 
 
       void analyze();

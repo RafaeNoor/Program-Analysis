@@ -28,7 +28,7 @@ namespace {
 
   std::vector<Expression> globalVec;
 
-  void available_transfer(BasicBlock* b, std::map<BasicBlock*, BBInfo*> &m){
+  bool available_transfer(BasicBlock* b, std::map<BasicBlock*, BBInfo*> &m){
 
 
     BitVector In_B(*(m[b]->input)); // In[B]
@@ -128,14 +128,15 @@ namespace {
     }
 
     m[b]->output =  new BitVector(Out_B);
+    return false;
 
   }
 
-  void available_meet(BasicBlock* lb, std::map<BasicBlock*, BBInfo*> &m){
+  bool available_meet(BasicBlock* lb, std::map<BasicBlock*, BBInfo*> &m){
     if(pred_begin(lb) == pred_end(lb)) //if entry block
     {
       errs()<<"\nInvoked Meet on entry block";
-      return;
+      return false;
     }
 
 
@@ -153,9 +154,11 @@ namespace {
       meeting &= *(m[curr]->output); //Take intersection of predecessors
       numPreds++;
     }
+    bool isChanged = meeting != *(m[lb]->input);
+    errs()<<"=================================================================\nMeet Input Changed : "<<isChanged<<"\n";
     m[lb]->input = new BitVector(meeting);
 
-    errs()<<"=================================================================\n# Predeccesors = "<<numPreds<<"\n";
+    errs()<<"# Predeccesors = "<<numPreds<<"\n";
 
 
     for(unsigned i =0;i < m[lb]->input->size();i++){
@@ -167,7 +170,7 @@ namespace {
     errs()<<"\n";
 
 
-    return;
+    return isChanged;
   }
 
 

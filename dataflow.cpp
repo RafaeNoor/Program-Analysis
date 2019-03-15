@@ -5,7 +5,7 @@
 #include "dataflow.h"
 
 namespace llvm {
-  Flow::Flow(bool f, Function& p, void (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo* >&), void (*m)(BasicBlock*,std::map<BasicBlock*,BBInfo* >&)){
+  Flow::Flow(bool f, Function& p, bool (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo* >&), bool (*m)(BasicBlock*,std::map<BasicBlock*,BBInfo* >&)){
     isFwd = f;
     Func = &p;
     transfer = tran;
@@ -17,7 +17,7 @@ namespace llvm {
     }
   }
 
-  Flow::Flow(bool f, Function& p, void (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo* > &),void (*m)(BasicBlock*,std::map<BasicBlock*, BBInfo*> &),int n){
+  Flow::Flow(bool f, Function& p, bool (*tran)(BasicBlock*, std::map<BasicBlock*, BBInfo* > &),bool (*m)(BasicBlock*,std::map<BasicBlock*, BBInfo*> &),int n){
     isFwd = f;
     Func = &p;
     transfer = tran;
@@ -29,14 +29,9 @@ namespace llvm {
     }
   }  
 
-
-
-  
-
-
   void Flow::analyze()
   {
-    
+
     if(isFwd){
       BasicBlock* entry = &Func->getEntryBlock();
       runAnalysis(entry);
@@ -44,8 +39,6 @@ namespace llvm {
 
 
     }
-    
-
 
   }
 
@@ -59,25 +52,49 @@ namespace llvm {
     q.push(b);
     info[b]->inserted = true;
 
+    bool converge = false;
 
-    while(q.size() != 0){
-      BasicBlock* curr = q.front();
-      q.pop();
+    int numIter = 1;
+
+    while(!converge){
+      
+      errs()<<"\nIteration Number: "<<numIter<<" \n";
+      numIter++;
+
+      converge = true;
+      while(q.size() != 0){
+        BasicBlock* curr = q.front();
+        q.pop();
 
 
-      meet(curr,info);
-      transfer(curr,info);
+        bool inputChanged = meet(curr,info);
 
-      TerminatorInst* ti = curr -> getTerminator();
-      for(unsigned i=0, nsucc = ti -> getNumSuccessors(); i<nsucc;++i){
-        BasicBlock* succ = &*ti->getSuccessor(i);
-        if(!info[succ]->inserted){
-          q.push(succ);
-          info[succ]->inserted = true;
+        bool outputChanged = transfer(curr,info);
+
+        if(inputChanged || outputChanged)
+          converge = false;
+
+        TerminatorInst* ti = curr -> getTerminator();
+        for(unsigned i=0, nsucc = ti -> getNumSuccessors(); i<nsucc;++i){
+          BasicBlock* succ = &*ti->getSuccessor(i);
+          if(!info[succ]->inserted){
+            q.push(succ);
+            info[succ]->inserted = true;
+          }
         }
+
+      }
+      errs()<<"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+      for(Function::iterator bb = Func->begin(), ee = Func->end(); bb!=ee; bb++)
+      {
+        BasicBlock* refresh = &*bb;
+        info[refresh]->inserted = false;
       }
 
+      info[b]->inserted = true;
+      q.push(b);
     }
+
   }
   // Add code for your dataflow abstraction here.
 }
