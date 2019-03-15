@@ -36,8 +36,14 @@ namespace llvm {
       BasicBlock* entry = &Func->getEntryBlock();
       runAnalysis(entry);
     } else {
+      for(Function::iterator BI = Func->begin(), BE = Func->end(); BI!=BE; BI++){
+        BasicBlock* bb = &*BI;
+        info[bb]->input->reset();
+        info[bb]->output->reset();
+      } 
 
-
+      BasicBlock* exit = &Func->back();
+      runAnalysis(exit);
     }
 
   }
