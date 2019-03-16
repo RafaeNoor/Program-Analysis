@@ -14,6 +14,7 @@ using namespace llvm;
 namespace {
 
   std::vector<std::string> names;
+  bool Verbose = true;
   void printBitVector(BitVector bv){
     for(unsigned i =0 ; i < bv.size() ;i++){
       if(bv[i])
@@ -35,7 +36,6 @@ namespace {
     int bv_size = m[b]->input->size(); 
 
 
-    bool Verbose = true;
 
     BitVector Use_B(bv_size, false);// Use[B]
     BitVector Def_B(bv_size, false); // Def[B]
@@ -47,11 +47,13 @@ namespace {
       Instruction* ins = &*BB;
       Value* ins_val = &(*ins);
 
-      if(auto PHI = dyn_cast<PHINode>(ins)){
+      if(PHINode* PHI = dyn_cast<PHINode>(ins)){
         errs()<<"~~~~~~~~~~~~~~~\nPhi Node encountered with "<<PHI->getNumIncomingValues()<<" incoming values \n";
-        for(int t = 0; t<PHI->getNumIncomingValues(); ++t){
+        for(unsigned t = 0; t<PHI->getNumIncomingValues(); ++t){
           errs()<<PHI->getIncomingBlock(t)->getName()<<" : "<< *(PHI->getIncomingValue(t))<<"\n";
-
+          Value* phi_val = PHI->getIncomingValue(t);
+          std::string phi_name = getShortValueName(phi_val);
+          errs()<<"PHI_NAME : "<<phi_name<<"\n";
 
 
         }
@@ -127,12 +129,13 @@ namespace {
       Use_B.reset();
 
     }
+    bool isChanged = *(m[b]->input) != In_B;
     m[b]->input = new BitVector(In_B);
 
 
     errs()<<"=====================================\n";
 
-    return false;
+    return isChanged;
   }
 
 
@@ -151,11 +154,35 @@ namespace {
       return false;
     }
 
+    errs()<<"Meet Operator\n";
+
 
     BitVector meeting(m[lb]->input->size(),false);
     for(unsigned i=0, nsucc = ti ->getNumSuccessors();i < nsucc; ++i){
       BasicBlock* succ = &*ti->getSuccessor(i);
-      meeting |= *(m[succ]->input);
+      BitVector succCopy(*(m[succ]->input));
+
+      // If Successor has PHI-Nodes, we set 0 any input bit which isn't defined in our basic block (even if it's true)
+      for(BasicBlock::iterator bi = succ->begin(), ei = succ->end(); bi != ei; ++bi){
+        Instruction* ins = &(*bi);
+        if(PHINode* PHI = dyn_cast<PHINode>(ins)){
+          for(unsigned t = 0; t<PHI->getNumIncomingValues(); ++t){
+            if(PHI->getIncomingBlock(t)->getName() != lb->getName()){
+              for(unsigned cl = 0;cl < names.size(); cl++){
+                if(names[cl] == getShortValueName((PHI->getIncomingValue(t)))){
+                  succCopy[cl] = false;
+                  if(Verbose){
+                    errs()<<"Removing "<<names[cl]<<" from succCopy Input\n";
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          continue; // As Phi-Node instructions occur at the top of a basic block, if we encounter a Non-Phi Instruction, we can skip
+        }
+      }
+      meeting |= succCopy;
     }
     errs()<<"\n# Successors = "<<ti->getNumSuccessors()<<"\n";
 
@@ -198,17 +225,17 @@ namespace {
               Value* val = *OI;
 
               if(Instruction* IO = dyn_cast<Instruction>(val)){
-                errs()<<"{INS}["<<getShortValueName(val)<<"] is used by ["<<*ins<<"] where LHS: "<<getShortValueName(ins_val)<<"\n";
+                //errs()<<"{INS}["<<getShortValueName(val)<<"] is used by ["<<*ins<<"] where LHS: "<<getShortValueName(ins_val)<<"\n";
 
                 unique_names.insert(getShortValueName(val));
               }
               if(Argument* ARG = dyn_cast<Argument>(val)){
-                errs()<<"{ARG}["<<getShortValueName(val)<<"] is used by ["<<*ins<<"] where LHS: "<<getShortValueName(ins_val)<<"\n";
+                //errs()<<"{ARG}["<<getShortValueName(val)<<"] is used by ["<<*ins<<"] where LHS: "<<getShortValueName(ins_val)<<"\n";
                 unique_names.insert(getShortValueName(val));
               }
 
             }
-            errs()<<"\n";
+            //errs()<<"\n";
           }
         }
 
