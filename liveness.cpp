@@ -47,6 +47,17 @@ namespace {
       Instruction* ins = &*BB;
       Value* ins_val = &(*ins);
 
+      if(auto PHI = dyn_cast<PHINode>(ins)){
+        errs()<<"~~~~~~~~~~~~~~~\nPhi Node encountered with "<<PHI->getNumIncomingValues()<<" incoming values \n";
+        for(int t = 0; t<PHI->getNumIncomingValues(); ++t){
+          errs()<<PHI->getIncomingBlock(t)->getName()<<" : "<< *(PHI->getIncomingValue(t))<<"\n";
+
+
+
+        }
+        errs()<<"~~~~~~~~~~~~~~~~\n";
+      }
+
       //errs()<<*ins<<"\n";
 
 
@@ -73,7 +84,6 @@ namespace {
       }
 
 
-
       if(Verbose){
         errs()<<"Use[B] ";
         printBitVector(Use_B);
@@ -81,9 +91,10 @@ namespace {
         errs()<<"Def[B] ";
         printBitVector(Def_B);
 
-        errs()<<"In[B] ";
+        errs()<<"Out[B] ";
         printBitVector(In_B);
       }
+
 
       //In[B] = Use[B] U (Out[B] - Def[B])
 
@@ -95,6 +106,13 @@ namespace {
 
       In_B = UnionTerm;
 
+      if(Verbose){
+        errs()<<"In[B] ";
+        printBitVector(In_B);
+      }
+
+
+
       errs()<<"{";
       for(unsigned k = 0; k<In_B.size(); k++){
         if(In_B[k] == true){
@@ -103,14 +121,14 @@ namespace {
       }
       errs()<<"}\n";
 
-      errs()<<*ins<<"\n";
+      errs()<<*ins<<"\n\n";
 
       Def_B.reset();
       Use_B.reset();
 
     }
     m[b]->input = new BitVector(In_B);
-    
+
 
     errs()<<"=====================================\n";
 
@@ -122,9 +140,9 @@ namespace {
     if(!lb)
       return false;
 
-     
+
     BitVector Old_Output(*(m[lb]->output));
-  
+
 
     TerminatorInst* ti = lb->getTerminator();
     if(ti->getNumSuccessors() == 0){
@@ -139,7 +157,7 @@ namespace {
       BasicBlock* succ = &*ti->getSuccessor(i);
       meeting |= *(m[succ]->input);
     }
-    errs()<<"# Successors = "<<ti->getNumSuccessors()<<"\n";
+    errs()<<"\n# Successors = "<<ti->getNumSuccessors()<<"\n";
 
     m[lb]->output = new BitVector(meeting);
 
