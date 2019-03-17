@@ -15,6 +15,7 @@ using namespace std;
 
 namespace {
 
+  bool Verbose = false;
 
   void printBitVector(BitVector bv){
     for(unsigned i =0 ; i < bv.size() ;i++){
@@ -30,20 +31,21 @@ namespace {
 
   bool available_transfer(BasicBlock* b, std::map<BasicBlock*, BBInfo*> &m){
 
+    errs()<<"==============================\n"<<*b<<"\n";
+
 
     BitVector In_B(*(m[b]->input)); // In[B]
     BitVector Gen_B(m[b]->input->size(),false);//Gen[B]
     BitVector Kill_B(m[b]->input->size(),false);//Kill[B]
     BitVector Out_B(In_B); //Out[B]
 
-    bool Verbose = false;
 
 
 
     for(BasicBlock::iterator BI = b->begin(), e = b->end(); BI!=e;++BI){
       Instruction* I = &*BI;
       std::vector<Expression> alive_rn;
-      errs()<<"\n========\n"<<*I<<"\n";
+      errs()<<"\n"<<*I<<"\n";
       Value* val = &(*I);
 
       if(BinaryOperator * BO = dyn_cast<BinaryOperator>(I)){// If it's an Expression
@@ -155,17 +157,21 @@ namespace {
       numPreds++;
     }
     bool isChanged = meeting != *(m[lb]->input);
-    errs()<<"=================================================================\nMeet Input Changed : "<<isChanged<<"\n";
+    if(Verbose){
+      errs()<<"=================================================================\nMeet Input Changed : "<<isChanged<<"\n";
+      errs()<<"# Predeccesors = "<<numPreds<<"\n";
+    }
     m[lb]->input = new BitVector(meeting);
 
-    errs()<<"# Predeccesors = "<<numPreds<<"\n";
 
 
-    for(unsigned i =0;i < m[lb]->input->size();i++){
-      if((*(m[lb]->input))[i])
-        errs()<<"1 ";
-      else
-        errs()<<"0 ";
+    if(Verbose){
+      for(unsigned i =0;i < m[lb]->input->size();i++){
+        if((*(m[lb]->input))[i])
+          errs()<<"1 ";
+        else
+          errs()<<"0 ";
+      }
     }
     errs()<<"\n";
 

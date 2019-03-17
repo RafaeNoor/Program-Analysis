@@ -14,7 +14,7 @@ using namespace llvm;
 namespace {
 
   std::vector<std::string> names;
-  bool Verbose = true;
+  bool Verbose = false;
   void printBitVector(BitVector bv){
     for(unsigned i =0 ; i < bv.size() ;i++){
       if(bv[i])
@@ -47,17 +47,19 @@ namespace {
       Instruction* ins = &*BB;
       Value* ins_val = &(*ins);
 
+
+
       if(PHINode* PHI = dyn_cast<PHINode>(ins)){
-        errs()<<"~~~~~~~~~~~~~~~\nPhi Node encountered with "<<PHI->getNumIncomingValues()<<" incoming values \n";
-        for(unsigned t = 0; t<PHI->getNumIncomingValues(); ++t){
-          errs()<<PHI->getIncomingBlock(t)->getName()<<" : "<< *(PHI->getIncomingValue(t))<<"\n";
-          Value* phi_val = PHI->getIncomingValue(t);
-          std::string phi_name = getShortValueName(phi_val);
-          errs()<<"PHI_NAME : "<<phi_name<<"\n";
-
-
+        if(Verbose){
+          errs()<<"~~~~~~~~~~~~~~~\nPhi Node encountered with "<<PHI->getNumIncomingValues()<<" incoming values \n";
+          for(unsigned t = 0; t<PHI->getNumIncomingValues(); ++t){
+            errs()<<PHI->getIncomingBlock(t)->getName()<<" : "<< *(PHI->getIncomingValue(t))<<"\n";
+            Value* phi_val = PHI->getIncomingValue(t);
+            std::string phi_name = getShortValueName(phi_val);
+            errs()<<"PHI_NAME : "<<phi_name<<"\n";
+          }
+          errs()<<"~~~~~~~~~~~~~~~~\n";
         }
-        errs()<<"~~~~~~~~~~~~~~~~\n";
       }
 
       //errs()<<*ins<<"\n";
@@ -149,12 +151,16 @@ namespace {
 
     TerminatorInst* ti = lb->getTerminator();
     if(ti->getNumSuccessors() == 0){
-      errs()<<"Meet invoked on exit block\n";
-      errs()<<"# successors = 0\n==========================================";
+      if(Verbose){
+        errs()<<"Meet invoked on exit block\n";
+        errs()<<"# successors = 0\n==========================================";
+      }
       return false;
     }
 
-    errs()<<"Meet Operator\n";
+    if(Verbose){
+      errs()<<"Meet Operator\n";
+    }
 
 
     BitVector meeting(m[lb]->input->size(),false);
@@ -184,7 +190,9 @@ namespace {
       }
       meeting |= succCopy;
     }
-    errs()<<"\n# Successors = "<<ti->getNumSuccessors()<<"\n";
+    if(Verbose){
+      errs()<<"\n# Successors = "<<ti->getNumSuccessors()<<"\n";
+    }
 
     m[lb]->output = new BitVector(meeting);
 
@@ -214,7 +222,7 @@ namespace {
         // Did not modify the incoming Function.
         std::set< std::string> unique_names;
 
-        for(Function::iterator bb = F.begin(), be = F.end(); bb!=be; bb++){
+        for(Function::iterator bb = F.begin(), be = F.end(); bb!=be; bb++){ // Iterate over instructions to get Names of 'variables'
           BasicBlock* block = &*bb;
           errs()<<*block<<"\n";
           for(BasicBlock::iterator ib = block->begin(), eb = block->end(); ib!=eb;ib++){

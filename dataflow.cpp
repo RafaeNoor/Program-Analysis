@@ -111,6 +111,7 @@ namespace llvm {
       info[b]->inserted = true;
       q.push(b);
     }
+    errs()<<"Converged!\n";
 
   }
 
