@@ -78,11 +78,12 @@ namespace llvm {
     bool c = true;
     int count = 1;
     while(c){
+
+      c = false;
     while(q.size() != 0){
       BasicBlock* curr = q.front();
       q.pop();
 
-      c = false;
       bool mc = meet(curr,info);
       bool tc = transfer(curr,info);
 

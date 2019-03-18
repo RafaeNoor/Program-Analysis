@@ -27,66 +27,50 @@ namespace {
 
     for(BasicBlock::reverse_iterator bi = b->rbegin(),be = b->rend(); bi!=be;bi++){
       Instruction* I = &*bi;
-
-      if(PHINode* PHI = dyn_cast<PHINode>(I)){
       
-         for(unsigned t = 0; t<PHI->getNumIncomingValues(); ++t){
-            errs()<<"["<<PHI->getIncomingBlock(t)->getName()<<" : "<< *(PHI->getIncomingValue(t))<<"]";
-            Value* phi_val = PHI->getIncomingValue(t);
-            std::string phi_name = getShortValueName(phi_val);
-            errs()<<"PHI_NAME : "<<phi_name;
-         }
-	 errs()<<"\n";
-}else{
-    BranchInst* br = dyn_cast<BranchInst>(I);
-    if(!br){
-	   // errs()<<*br<<"\n";
-	  //  break;
-     
-
-
-
+      
       for(User::op_iterator OI = I->op_begin(); OI!= I->op_end(); OI++){
         Value* v = *OI;
-	if(isa<Instruction>(v) || isa<Argument>(v)){
-	  for(unsigned i=0; i<variables.size();i++){
-	    if(getShortValueName(v) == variables[i]){
-	      use[i] = true;
-	   //   errs()<<"adding "<<variables[i]<<" to use["<<b->getName()<<"]"<<"\n";
-	    }
-	  }
-	}
+        if(isa<Instruction>(v) || isa<Argument>(v)){
+          for(unsigned i=0; i<variables.size();i++){
+            if(getShortValueName(v) == variables[i]){
+              use[i] = true;
+            }
+          }
+        }
       }
 
-      std::string var = getShortValueName(I);
+
+      Value* val = I;
       for(unsigned i =0; i<variables.size(); i++){
-        if(var == variables[i]){
+        if(getShortValueName(val)==variables[i]){
 	  def[i] = true;
-	 // errs()<<"adding "<<variables[i]<<" to def["<<b->getName()<<"]"<<"\n";
 	}
       }
 
+      def = def.flip();
+      In &= def;
+      use |= In;
+      In = use;
 
-    BitVector DiffTerm(In);
-    DiffTerm &= (def.flip());
-    BitVector UnionTerm(use);
-    UnionTerm |= DiffTerm; 
-
-    In = UnionTerm;
-    }
-    errs()<<*I<<"\n"<<"{";
-    for(unsigned i =0; i<variables.size();i++){
-      if(In[i]){
-        errs() <<variables[i]<< " ";
+      errs()<<*I<<"\n";
+      if(!(isa<PHINode>(I))){
+	 errs()<<"{";
+      for(unsigned k =0; k<variables.size();k++){
+        if(In[k]){
+	  errs()<< variables[k]<<" ";
+	}
       }
-    }
-    errs()<<"}"<<"\n";
-}
-    }
-    
-    m[b]->input = new BitVector(In);
+      errs()<<"}"<<"\n";
+      }
 
+      use.reset();
+      def.reset();
 
+    }
+
+   m[b]->input = new BitVector(In);
+   errs()<<"!!!!!!!!!!!!!!!!!!!!!!!!!"<<"\n";
    return (*(m[b]->input) != old);
  
   
@@ -107,8 +91,7 @@ namespace {
 
 
     TerminatorInst* ti = b->getTerminator();
-    BasicBlock* s = &*ti->getSuccessor(0);
-    int bit_size = m[s]->input->size();
+    int bit_size = variables.size();
     BitVector meet(bit_size, false);
 
     for(unsigned i=0, nsucc = ti->getNumSuccessors(); i<nsucc;++i){
@@ -123,19 +106,18 @@ namespace {
                     if(variables[cl] == getShortValueName((PHI->getIncomingValue(t)))){
                       succIn[cl] = false;
                      
-         //             errs()<<"Removing "<<variables[cl]<<" from succ Input\n";
                   
                 }
               }
             }
           }
         } else {
-          continue; // As Phi-Node instructions occur at the top of a basic block, if we encounter a Non-Phi Instruction, we can skip
-}
-       BitVector SucIn(*(m[succ]->input));
-      meet |= SucIn;
+          continue; 
+	}
 
-      } 
+      }
+
+      meet |= succIn;
     }
 
     m[b]->output = new BitVector(meet);
@@ -190,22 +172,13 @@ namespace {
           
          errs() << variables[i] <<"\n";
        }
+       errs()<<"=================================================="<<"\n";
 
 
        Flow liveness(false, F,*transfer_live, *meet_live, variables.size() );
 
        liveness.analyze();
 
-       for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
-          BasicBlock* block = &*FI;
-          BitVector out(*liveness.info[block]->output);
-	  for(unsigned i =0; i<variables.size(); ++i){
-	    if(out[i]){
-	      errs() << variables[i] <<" ";
-	    }
-	  }
-	    errs() << "\n";
-      }
       // Did not modify the incoming Function.
       return false;
     }
